@@ -256,7 +256,12 @@ public class QueryUtils {
       }
 
       @Override
-      public void document(int docID, StoredFieldVisitor visitor) throws IOException {}
+      public StoredFields storedFields() {
+        return new StoredFields() {
+          @Override
+          public void document(int docID, StoredFieldVisitor visitor) throws IOException {}
+        };
+      }
 
       @Override
       protected void doClose() throws IOException {}

@@ -46,6 +46,7 @@ import org.apache.lucene.document.NumericDocValuesField;
 import org.apache.lucene.document.StoredField;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
+import org.apache.lucene.index.IndexReader.StoredFields;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Sort;
@@ -150,6 +151,7 @@ public abstract class BaseStoredFieldsFormatTestCase extends BaseIndexFileFormat
 
       for (int x = 0; x < 2; x++) {
         DirectoryReader r = maybeWrapWithMergingReader(w.getReader());
+        StoredFields storedFields = r.storedFields();
         IndexSearcher s = newSearcher(r);
 
         if (VERBOSE) {
@@ -164,7 +166,7 @@ public abstract class BaseStoredFieldsFormatTestCase extends BaseIndexFileFormat
           }
           TopDocs hits = s.search(new TermQuery(new Term("id", testID)), 1);
           assertEquals(1, hits.totalHits.value);
-          Document doc = r.document(hits.scoreDocs[0].doc);
+          Document doc = storedFields.document(hits.scoreDocs[0].doc);
           Document docExp = docs.get(testID);
           for (int i = 0; i < fieldCount; i++) {
             assertEquals(
@@ -194,7 +196,7 @@ public abstract class BaseStoredFieldsFormatTestCase extends BaseIndexFileFormat
     doc.add(newField("zzz", "1 2 3", customType));
     w.addDocument(doc);
     IndexReader r = maybeWrapWithMergingReader(w.getReader());
-    Document doc2 = r.document(0);
+    Document doc2 = r.storedFields().document(0);
     Iterator<IndexableField> it = doc2.getFields().iterator();
     assertTrue(it.hasNext());
     Field f = (Field) it.next();
@@ -235,7 +237,7 @@ public abstract class BaseStoredFieldsFormatTestCase extends BaseIndexFileFormat
     w.close();
 
     IndexReader ir = DirectoryReader.open(dir);
-    Document doc2 = ir.document(0);
+    Document doc2 = ir.storedFields().document(0);
     IndexableField f2 = doc2.getField("binary");
     b = f2.binaryValue().bytes;
     assertTrue(b != null);
@@ -299,8 +301,9 @@ public abstract class BaseStoredFieldsFormatTestCase extends BaseIndexFileFormat
     for (LeafReaderContext ctx : r.leaves()) {
       final LeafReader sub = ctx.reader();
       final NumericDocValues ids = DocValues.getNumeric(sub, "id");
+      final StoredFields storedFields = sub.storedFields();
       for (int docID = 0; docID < sub.numDocs(); docID++) {
-        final Document doc = sub.document(docID);
+        final Document doc = storedFields.document(docID);
         final Field f = (Field) doc.getField("nf");
         assertTrue("got f=" + f, f instanceof StoredField);
         assertEquals(docID, ids.nextDoc());
@@ -322,8 +325,10 @@ public abstract class BaseStoredFieldsFormatTestCase extends BaseIndexFileFormat
     w.addDocument(doc);
     IndexReader r = maybeWrapWithMergingReader(w.getReader());
     w.close();
-    assertEquals(IndexOptions.NONE, r.document(0).getField("field").fieldType().indexOptions());
-    assertNotNull(r.document(0).getField("field2").fieldType().indexOptions());
+    StoredFields storedFields = r.storedFields();
+    assertEquals(
+        IndexOptions.NONE, storedFields.document(0).getField("field").fieldType().indexOptions());
+    assertNotNull(storedFields.document(0).getField("field2").fieldType().indexOptions());
     r.close();
     dir.close();
   }
@@ -364,10 +369,11 @@ public abstract class BaseStoredFieldsFormatTestCase extends BaseIndexFileFormat
     iw.commit();
 
     final DirectoryReader reader = maybeWrapWithMergingReader(DirectoryReader.open(dir));
+    final StoredFields storedFields = reader.storedFields();
     final int docID = random().nextInt(100);
     for (Field fld : fields) {
       String fldName = fld.name();
-      final Document sDoc = reader.document(docID, Collections.singleton(fldName));
+      final Document sDoc = storedFields.document(docID, Collections.singleton(fldName));
       final IndexableField sField = sDoc.getField(fldName);
       if (Field.class.equals(fld.getClass())) {
         assertEquals(fld.binaryValue(), sField.binaryValue());
@@ -395,8 +401,9 @@ public abstract class BaseStoredFieldsFormatTestCase extends BaseIndexFileFormat
     }
     iw.commit();
     final DirectoryReader rd = maybeWrapWithMergingReader(DirectoryReader.open(dir));
+    final StoredFields storedFields = rd.storedFields();
     for (int i = 0; i < numDocs; ++i) {
-      final Document doc = rd.document(i);
+      final Document doc = storedFields.document(i);
       assertNotNull(doc);
       assertTrue(doc.getFields().isEmpty());
     }
@@ -432,6 +439,7 @@ public abstract class BaseStoredFieldsFormatTestCase extends BaseIndexFileFormat
     for (int i = 0; i < concurrentReads; ++i) {
       readThreads.add(
           new Thread() {
+            final StoredFields storedFields = rd.storedFields();
 
             int[] queries;
 
@@ -452,7 +460,7 @@ public abstract class BaseStoredFieldsFormatTestCase extends BaseIndexFileFormat
                     throw new IllegalStateException(
                         "Expected 1 hit, got " + topDocs.totalHits.value);
                   }
-                  final Document sdoc = rd.document(topDocs.scoreDocs[0].doc);
+                  final Document sdoc = storedFields.document(topDocs.scoreDocs[0].doc);
                   if (sdoc == null || sdoc.get("fld") == null) {
                     throw new IllegalStateException("Could not find document " + q);
                   }
@@ -559,10 +567,11 @@ public abstract class BaseStoredFieldsFormatTestCase extends BaseIndexFileFormat
     iw.commit();
 
     final DirectoryReader ir = maybeWrapWithMergingReader(DirectoryReader.open(dir));
+    final StoredFields storedFields = ir.storedFields();
     assertTrue(ir.numDocs() > 0);
     int numDocs = 0;
     for (int i = 0; i < ir.maxDoc(); ++i) {
-      final Document doc = ir.document(i);
+      final Document doc = storedFields.document(i);
       if (doc == null) {
         continue;
       }
@@ -595,8 +604,15 @@ public abstract class BaseStoredFieldsFormatTestCase extends BaseIndexFileFormat
     }
 
     @Override
-    public void document(int docID, StoredFieldVisitor visitor) throws IOException {
-      super.document(maxDoc() - 1 - docID, visitor);
+    public StoredFields storedFields() {
+      return new StoredFields() {
+        private final StoredFields inStored = in.storedFields();
+
+        @Override
+        public void document(int docID, StoredFieldVisitor visitor) throws IOException {
+          inStored.document(maxDoc() - 1 - docID, visitor);
+        }
+      };
     }
 
     @Override
@@ -672,8 +688,9 @@ public abstract class BaseStoredFieldsFormatTestCase extends BaseIndexFileFormat
     dir.close();
 
     reader = maybeWrapWithMergingReader(w.getReader());
+    StoredFields storedFields = reader.storedFields();
     for (int i = 0; i < reader.maxDoc(); ++i) {
-      final Document doc = reader.document(i);
+      final Document doc = storedFields.document(i);
       final int id = doc.getField("id").numericValue().intValue();
       final Document expected = docs[id];
       assertEquals(expected.get("s"), doc.get("s"));
@@ -750,11 +767,12 @@ public abstract class BaseStoredFieldsFormatTestCase extends BaseIndexFileFormat
     iw.forceMerge(1); // look at what happens when big docs are merged
     final DirectoryReader rd = maybeWrapWithMergingReader(DirectoryReader.open(dir));
     final IndexSearcher searcher = new IndexSearcher(rd);
+    final StoredFields storedFields = rd.storedFields();
     for (int i = 0; i < numDocs; ++i) {
       final Query query = new TermQuery(new Term("id", "" + i));
       final TopDocs topDocs = searcher.search(query, 1);
       assertEquals("" + i, 1, topDocs.totalHits.value);
-      final Document doc = rd.document(topDocs.scoreDocs[0].doc);
+      final Document doc = storedFields.document(topDocs.scoreDocs[0].doc);
       assertNotNull(doc);
       final IndexableField[] fieldValues = doc.getFields("fld");
       assertEquals(docs[i].getFields("fld").length, fieldValues.length);
@@ -833,8 +851,9 @@ public abstract class BaseStoredFieldsFormatTestCase extends BaseIndexFileFormat
     iw.forceMerge(1);
 
     LeafReader ir = getOnlyLeafReader(DirectoryReader.open(iw));
+    StoredFields storedFields = ir.storedFields();
     for (int i = 0; i < ir.maxDoc(); i++) {
-      Document doc = ir.document(i);
+      Document doc = storedFields.document(i);
       assertEquals(10, doc.getFields().size());
       for (int j = 0; j < 10; j++) {
         assertEquals(Integer.toString(j), doc.get(Integer.toString(j)));
@@ -856,10 +875,10 @@ public abstract class BaseStoredFieldsFormatTestCase extends BaseIndexFileFormat
     } else {
       sortFields = new SortField[] {new SortField("sort-1", SortField.Type.LONG)};
     }
-    List<String> storedFields = new ArrayList<>();
+    List<String> storedFieldNames = new ArrayList<>();
     int numFields = TestUtil.nextInt(random(), 1, 10);
     for (int i = 0; i < numFields; i++) {
-      storedFields.add("f-" + i);
+      storedFieldNames.add("f-" + i);
     }
     FieldType storeType = new FieldType(TextField.TYPE_STORED);
     storeType.setStored(true);
@@ -868,9 +887,9 @@ public abstract class BaseStoredFieldsFormatTestCase extends BaseIndexFileFormat
           Document doc = new Document();
           doc.add(new StringField("id", id, random().nextBoolean() ? Store.YES : Store.NO));
           if (random().nextInt(100) <= 5) {
-            Collections.shuffle(storedFields, random());
+            Collections.shuffle(storedFieldNames, random());
           }
-          for (String fieldName : storedFields) {
+          for (String fieldName : storedFieldNames) {
             if (random().nextBoolean()) {
               String s = TestUtil.randomUnicodeString(random(), 100);
               doc.add(newField(fieldName, s, storeType));
@@ -904,6 +923,7 @@ public abstract class BaseStoredFieldsFormatTestCase extends BaseIndexFileFormat
           }
           try (DirectoryReader reader = maybeWrapWithMergingReader(iw.getReader())) {
             IndexSearcher searcher = new IndexSearcher(reader);
+            StoredFields storedFields = reader.storedFields();
             int iters = TestUtil.nextInt(random(), 1, 10);
             for (int i = 0; i < iters; i++) {
               String testID = addedIds.get(random().nextInt(addedIds.size()));
@@ -916,7 +936,7 @@ public abstract class BaseStoredFieldsFormatTestCase extends BaseIndexFileFormat
                   docs.get(testID).getFields().stream()
                       .filter(f -> f.fieldType().stored())
                       .collect(Collectors.toList());
-              Document actualDoc = reader.document(hits.scoreDocs[0].doc);
+              Document actualDoc = storedFields.document(hits.scoreDocs[0].doc);
               assertEquals(expectedFields.size(), actualDoc.getFields().size());
               for (IndexableField expectedField : expectedFields) {
                 IndexableField[] actualFields = actualDoc.getFields(expectedField.name());

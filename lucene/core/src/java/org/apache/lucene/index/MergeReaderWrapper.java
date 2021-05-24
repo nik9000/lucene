@@ -36,7 +36,6 @@ class MergeReaderWrapper extends LeafReader {
   final FieldsProducer fields;
   final NormsProducer norms;
   final DocValuesProducer docValues;
-  final StoredFieldsReader store;
   final TermVectorsReader vectors;
 
   MergeReaderWrapper(CodecReader in) throws IOException {
@@ -59,12 +58,6 @@ class MergeReaderWrapper extends LeafReader {
       docValues = docValues.getMergeInstance();
     }
     this.docValues = docValues;
-
-    StoredFieldsReader store = in.getFieldsReader();
-    if (store != null) {
-      store = store.getMergeInstance();
-    }
-    this.store = store;
 
     TermVectorsReader vectors = in.getTermVectorsReader();
     if (vectors != null) {
@@ -220,10 +213,24 @@ class MergeReaderWrapper extends LeafReader {
   }
 
   @Override
-  public void document(int docID, StoredFieldVisitor visitor) throws IOException {
-    ensureOpen();
-    checkBounds(docID);
-    store.visitDocument(docID, visitor);
+  public StoredFields storedFields() {
+    return new StoredFields() {
+      StoredFieldsReader store;
+
+      {
+        StoredFieldsReader store = in.newFieldsReader();
+        if (store != null) {
+          this.store = store.getMergeInstance();
+        }
+      }
+
+      @Override
+      public void document(int docID, StoredFieldVisitor visitor) throws IOException {
+        ensureOpen();
+        checkBounds(docID);
+        store.visitDocument(docID, visitor);
+      }
+    };
   }
 
   @Override

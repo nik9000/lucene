@@ -30,6 +30,7 @@ import org.apache.lucene.benchmark.byTask.PerfRunData;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.Fields;
 import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.IndexReader.StoredFields;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
@@ -199,8 +200,9 @@ public class SearchTravRetHighlightTask extends SearchTravTask {
       highlighter.setFragmentScorer(new QueryScorer(q));
       // highlighter.setTextFragmenter();  unfortunately no sentence mechanism, not even regex.
       // Default here is trivial
+      StoredFields storedFields = reader.storedFields();
       for (ScoreDoc scoreDoc : docIdOrder(hits.scoreDocs)) {
-        Document document = reader.document(scoreDoc.doc, hlFields);
+        Document document = storedFields.document(scoreDoc.doc, hlFields);
         Fields tvFields = termVecs ? reader.getTermVectors(scoreDoc.doc) : null;
         for (IndexableField indexableField : document) {
           TokenStream tokenStream;

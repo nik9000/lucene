@@ -34,6 +34,7 @@ import java.util.function.Supplier;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.IndexReader.StoredFields;
 import org.apache.lucene.index.IndexReaderContext;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.LeafReaderContext;
@@ -364,8 +365,10 @@ public class IndexSearcher {
   /**
    * Sugar for <code>.getIndexReader().document(docID)</code>
    *
-   * @see IndexReader#document(int)
+   * @deprecated use {@link #getIndexReader()}.{@link IndexReader#storedFields()
+   *     storedFields}.{@link StoredFields#document(int) document}
    */
+  @Deprecated
   public Document doc(int docID) throws IOException {
     return reader.document(docID);
   }
@@ -373,8 +376,10 @@ public class IndexSearcher {
   /**
    * Sugar for <code>.getIndexReader().document(docID, fieldVisitor)</code>
    *
-   * @see IndexReader#document(int, StoredFieldVisitor)
+   * @deprecated use {@link #getIndexReader()}.{@link IndexReader#storedFields()
+   *     storedFields}.{@link StoredFields#document(int, StoredFieldVisitor) document}
    */
+  @Deprecated
   public void doc(int docID, StoredFieldVisitor fieldVisitor) throws IOException {
     reader.document(docID, fieldVisitor);
   }
@@ -382,8 +387,10 @@ public class IndexSearcher {
   /**
    * Sugar for <code>.getIndexReader().document(docID, fieldsToLoad)</code>
    *
-   * @see IndexReader#document(int, Set)
+   * @deprecated use {@link #getIndexReader()}.{@link IndexReader#storedFields()
+   *     storedFields}.{@link StoredFields#document(int, Set) document}
    */
+  @Deprecated
   public Document doc(int docID, Set<String> fieldsToLoad) throws IOException {
     return reader.document(docID, fieldsToLoad);
   }

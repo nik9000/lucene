@@ -186,7 +186,14 @@ public class TermVectorLeafReader extends LeafReader {
   }
 
   @Override
-  public void document(int docID, StoredFieldVisitor visitor) throws IOException {}
+  public StoredFields storedFields() {
+    return new StoredFields() {
+      @Override
+      public void document(int docID, StoredFieldVisitor visitor) throws IOException {
+        // Intentionally doesn't load anything
+      }
+    };
+  }
 
   @Override
   public LeafMetaData getMetaData() {

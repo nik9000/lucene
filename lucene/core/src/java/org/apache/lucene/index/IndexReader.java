@@ -347,11 +347,72 @@ public abstract class IndexReader implements Closeable {
   }
 
   /**
+   * Accesses stored fields, caching any state that'd make subsequent loads faster. Not at all
+   * thread safe so each thread will need to get its own copy.
+   */
+  public abstract class StoredFields {
+    /** Expert: build the stored fields loader. */
+    protected StoredFields() {}
+
+    /**
+     * Expert: visits the fields of a stored document, for custom processing/loading of each field.
+     * If you simply want to load all fields, use {@link #document(int)}. If you want to load a
+     * subset, use {@link DocumentStoredFieldVisitor}.
+     */
+    public abstract void document(int docID, StoredFieldVisitor visitor) throws IOException;
+
+    /**
+     * Returns the stored fields of the <code>n</code><sup>th</sup> <code>Document</code> in this
+     * index. This is just sugar for using {@link DocumentStoredFieldVisitor}.
+     *
+     * <p><b>NOTE:</b> for performance reasons, this method does not check if the requested document
+     * is deleted, and therefore asking for a deleted document may yield unspecified results.
+     * Usually this is not required, however you can test if the doc is deleted by checking the
+     * {@link Bits} returned from {@link MultiBits#getLiveDocs}.
+     *
+     * <p><b>NOTE:</b> only the content of a field is returned, if that field was stored during
+     * indexing. Metadata like boost, omitNorm, IndexOptions, tokenized, etc., are not preserved.
+     *
+     * @throws CorruptIndexException if the index is corrupt
+     * @throws IOException if there is a low-level IO error
+     */
+    // TODO: we need a separate StoredField, so that the
+    // Document returned here contains that class not
+    // IndexableField
+    public final Document document(int docID) throws IOException {
+      final DocumentStoredFieldVisitor visitor = new DocumentStoredFieldVisitor();
+      document(docID, visitor);
+      return visitor.getDocument();
+    }
+
+    /**
+     * Like {@link #document(int)} but only loads the specified fields. Note that this is simply
+     * sugar for {@link DocumentStoredFieldVisitor#DocumentStoredFieldVisitor(Set)}.
+     */
+    public final Document document(int docID, Set<String> fieldsToLoad) throws IOException {
+      final DocumentStoredFieldVisitor visitor = new DocumentStoredFieldVisitor(fieldsToLoad);
+      document(docID, visitor);
+      return visitor.getDocument();
+    }
+  }
+
+  /**
+   * Build an accessor for stored fields. The resulting accessors are not thread safe so each thread
+   * will need to call this method to build its own accessor.
+   */
+  public abstract StoredFields storedFields();
+
+  /**
    * Expert: visits the fields of a stored document, for custom processing/loading of each field. If
    * you simply want to load all fields, use {@link #document(int)}. If you want to load a subset,
    * use {@link DocumentStoredFieldVisitor}.
+   *
+   * @deprecated use the version of this method on {@link #storedFields()}
    */
-  public abstract void document(int docID, StoredFieldVisitor visitor) throws IOException;
+  @Deprecated
+  public final void document(int docID, StoredFieldVisitor visitor) throws IOException {
+    storedFields().document(docID, visitor);
+  }
 
   /**
    * Returns the stored fields of the <code>n</code><sup>th</sup> <code>Document</code> in this
@@ -367,24 +428,22 @@ public abstract class IndexReader implements Closeable {
    *
    * @throws CorruptIndexException if the index is corrupt
    * @throws IOException if there is a low-level IO error
+   * @deprecated use the version of this method on {@link #storedFields()}
    */
-  // TODO: we need a separate StoredField, so that the
-  // Document returned here contains that class not
-  // IndexableField
+  @Deprecated
   public final Document document(int docID) throws IOException {
-    final DocumentStoredFieldVisitor visitor = new DocumentStoredFieldVisitor();
-    document(docID, visitor);
-    return visitor.getDocument();
+    return storedFields().document(docID);
   }
 
   /**
    * Like {@link #document(int)} but only loads the specified fields. Note that this is simply sugar
    * for {@link DocumentStoredFieldVisitor#DocumentStoredFieldVisitor(Set)}.
+   *
+   * @deprecated use the version of this method on {@link #storedFields()}
    */
+  @Deprecated
   public final Document document(int docID, Set<String> fieldsToLoad) throws IOException {
-    final DocumentStoredFieldVisitor visitor = new DocumentStoredFieldVisitor(fieldsToLoad);
-    document(docID, visitor);
-    return visitor.getDocument();
+    return storedFields().document(docID, fieldsToLoad);
   }
 
   /**

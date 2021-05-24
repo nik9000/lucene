@@ -240,8 +240,8 @@ public final class SortingCodecReader extends FilterCodecReader {
   }
 
   @Override
-  public StoredFieldsReader getFieldsReader() {
-    StoredFieldsReader delegate = in.getFieldsReader();
+  public StoredFieldsReader newFieldsReader() {
+    StoredFieldsReader delegate = in.newFieldsReader();
     return newStoredFieldsReader(delegate);
   }
 

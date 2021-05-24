@@ -22,6 +22,7 @@ import org.apache.lucene.benchmark.byTask.feeds.QueryMaker;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.IndexReader.StoredFields;
 import org.apache.lucene.index.MultiBits;
 import org.apache.lucene.search.Collector;
 import org.apache.lucene.search.IndexSearcher;
@@ -86,9 +87,10 @@ public abstract class ReadTask extends PerfTask {
     if (withWarm()) {
       Document doc = null;
       Bits liveDocs = MultiBits.getLiveDocs(reader);
+      StoredFields storedFields = reader.storedFields();
       for (int m = 0; m < reader.maxDoc(); m++) {
         if (null == liveDocs || liveDocs.get(m)) {
-          doc = reader.document(m);
+          doc = storedFields.document(m);
           res += (doc == null ? 0 : 1);
         }
       }
@@ -127,9 +129,10 @@ public abstract class ReadTask extends PerfTask {
             System.out.println("totalHits = " + hits.totalHits);
             System.out.println("maxDoc()  = " + reader.maxDoc());
             System.out.println("numDocs() = " + reader.numDocs());
+            StoredFields storedFields = reader.storedFields();
             for (int i = 0; i < hits.scoreDocs.length; i++) {
               final int docID = hits.scoreDocs[i].doc;
-              final Document doc = reader.document(docID);
+              final Document doc = storedFields.document(docID);
               System.out.println(
                   "  "
                       + i
@@ -159,7 +162,7 @@ public abstract class ReadTask extends PerfTask {
   }
 
   protected int withTopDocs(IndexSearcher searcher, Query q, TopDocs hits) throws Exception {
-    IndexReader reader = searcher.getIndexReader();
+    StoredFields storedFields = searcher.getIndexReader().storedFields();
     int res = 0;
     if (withTraverse()) {
       final ScoreDoc[] scoreDocs = hits.scoreDocs;
@@ -171,7 +174,7 @@ public abstract class ReadTask extends PerfTask {
           int id = scoreDocs[m].doc;
           res++;
           if (retrieve) {
-            Document document = retrieveDoc(reader, id);
+            Document document = retrieveDoc(storedFields, id);
             res += document != null ? 1 : 0;
           }
         }
@@ -184,8 +187,8 @@ public abstract class ReadTask extends PerfTask {
     return TopScoreDocCollector.create(numHits(), withTotalHits() ? Integer.MAX_VALUE : 1);
   }
 
-  protected Document retrieveDoc(IndexReader ir, int id) throws IOException {
-    return ir.document(id);
+  protected Document retrieveDoc(StoredFields storedFields, int id) throws IOException {
+    return storedFields.document(id);
   }
 
   /** Return query maker used for this task. */

@@ -84,7 +84,7 @@ abstract class DocValuesLeafReader extends LeafReader {
   }
 
   @Override
-  public final void document(int docID, StoredFieldVisitor visitor) throws IOException {
+  public final StoredFields storedFields() {
     throw new UnsupportedOperationException();
   }
 

@@ -42,8 +42,15 @@ public class MismatchedLeafReader extends FilterLeafReader {
   }
 
   @Override
-  public void document(int docID, StoredFieldVisitor visitor) throws IOException {
-    in.document(docID, new MismatchedVisitor(visitor));
+  public StoredFields storedFields() {
+    return new StoredFields() {
+      private final StoredFields inStored = in.storedFields();
+
+      @Override
+      public void document(int docID, StoredFieldVisitor visitor) throws IOException {
+        inStored.document(docID, new MismatchedVisitor(visitor));
+      }
+    };
   }
 
   @Override

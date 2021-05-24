@@ -1744,9 +1744,14 @@ public class MemoryIndex {
     }
 
     @Override
-    public void document(int docID, StoredFieldVisitor visitor) {
-      if (DEBUG) System.err.println("MemoryIndexReader.document");
-      // no-op: there are no stored fields
+    public StoredFields storedFields() {
+      return new StoredFields() {
+        @Override
+        public void document(int docID, StoredFieldVisitor visitor) throws IOException {
+          if (DEBUG) System.err.println("MemoryIndexReader.document");
+          // no-op: there are no stored fields
+        }
+      };
     }
 
     @Override

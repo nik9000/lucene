@@ -2748,7 +2748,7 @@ public final class CheckIndex implements Closeable {
 
       // Scan stored fields for all documents
       final Bits liveDocs = reader.getLiveDocs();
-      StoredFieldsReader storedFields = reader.getFieldsReader().getMergeInstance();
+      StoredFieldsReader storedFields = reader.newFieldsReader().getMergeInstance();
       for (int j = 0; j < reader.maxDoc(); ++j) {
         // Intentionally pull even deleted documents to
         // make sure they too are not corrupt:

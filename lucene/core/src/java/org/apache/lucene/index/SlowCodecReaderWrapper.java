@@ -27,6 +27,7 @@ import org.apache.lucene.codecs.PointsReader;
 import org.apache.lucene.codecs.StoredFieldsReader;
 import org.apache.lucene.codecs.TermVectorsReader;
 import org.apache.lucene.codecs.VectorReader;
+import org.apache.lucene.index.IndexReader.StoredFields;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.util.Bits;
 
@@ -60,7 +61,7 @@ public final class SlowCodecReaderWrapper {
         }
 
         @Override
-        public StoredFieldsReader getFieldsReader() {
+        public StoredFieldsReader newFieldsReader() {
           reader.ensureOpen();
           return readerToStoredFieldsReader(reader);
         }
@@ -244,9 +245,11 @@ public final class SlowCodecReaderWrapper {
 
   private static StoredFieldsReader readerToStoredFieldsReader(final LeafReader reader) {
     return new StoredFieldsReader() {
+      private final StoredFields storedFields = reader.storedFields();
+
       @Override
       public void visitDocument(int docID, StoredFieldVisitor visitor) throws IOException {
-        reader.document(docID, visitor);
+        storedFields.document(docID, visitor);
       }
 
       @Override

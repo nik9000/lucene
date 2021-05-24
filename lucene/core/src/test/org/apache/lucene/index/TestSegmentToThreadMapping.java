@@ -119,7 +119,14 @@ public class TestSegmentToThreadMapping extends LuceneTestCase {
       protected void doClose() {}
 
       @Override
-      public void document(int doc, StoredFieldVisitor visitor) {}
+      public StoredFields storedFields() {
+        return new StoredFields() {
+          @Override
+          public void document(int docID, StoredFieldVisitor visitor) throws IOException {
+            // Intentionally doesn't load anything
+          }
+        };
+      }
 
       @Override
       public void checkIntegrity() throws IOException {}

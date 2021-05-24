@@ -131,7 +131,7 @@ public class MergeState {
         docValuesProducers[i] = docValuesProducers[i].getMergeInstance();
       }
 
-      storedFieldsReaders[i] = reader.getFieldsReader();
+      storedFieldsReaders[i] = reader.newFieldsReader();
       if (storedFieldsReaders[i] != null) {
         storedFieldsReaders[i] = storedFieldsReaders[i].getMergeInstance();
       }

@@ -60,8 +60,8 @@ public abstract class FilterCodecReader extends CodecReader {
   }
 
   @Override
-  public StoredFieldsReader getFieldsReader() {
-    return in.getFieldsReader();
+  public StoredFieldsReader newFieldsReader() {
+    return in.newFieldsReader();
   }
 
   @Override

@@ -369,9 +369,16 @@ public abstract class FilterLeafReader extends LeafReader {
   }
 
   @Override
-  public void document(int docID, StoredFieldVisitor visitor) throws IOException {
-    ensureOpen();
-    in.document(docID, visitor);
+  public StoredFields storedFields() {
+    return new StoredFields() {
+      private final StoredFields inStored = in.storedFields();
+
+      @Override
+      public void document(int docID, StoredFieldVisitor visitor) throws IOException {
+        ensureOpen();
+        inStored.document(docID, visitor);
+      }
+    };
   }
 
   @Override

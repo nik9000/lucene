@@ -21,13 +21,13 @@ import java.io.PrintWriter;
 import java.text.NumberFormat;
 import java.util.Locale;
 import org.apache.lucene.benchmark.quality.QualityQuery;
-import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.index.IndexReader.StoredFields;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
 
 /**
  * Create a log ready for submission. Extend this class and override {@link #report(QualityQuery,
- * TopDocs, String, IndexSearcher)} to create different reports.
+ * TopDocs, String, StoredFields)} to create different reports.
  */
 public class SubmissionReport {
 
@@ -55,10 +55,10 @@ public class SubmissionReport {
    * @param qq quality query for which the results are reported.
    * @param td search results for the query.
    * @param docNameField stored field used for fetching the result doc name.
-   * @param searcher index access for fetching doc name.
+   * @param storedFields index access for fetching doc name.
    * @throws IOException in case of a problem.
    */
-  public void report(QualityQuery qq, TopDocs td, String docNameField, IndexSearcher searcher)
+  public void report(QualityQuery qq, TopDocs td, String docNameField, StoredFields storedFields)
       throws IOException {
     if (logger == null) {
       return;
@@ -67,7 +67,7 @@ public class SubmissionReport {
     String sep = " \t ";
     DocNameExtractor xt = new DocNameExtractor(docNameField);
     for (int i = 0; i < sd.length; i++) {
-      String docName = xt.docName(searcher, sd[i].doc);
+      String docName = xt.docName(storedFields, sd[i].doc);
       logger.println(
           qq.getQueryID()
               + sep

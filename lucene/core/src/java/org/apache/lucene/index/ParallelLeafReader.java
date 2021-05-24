@@ -266,11 +266,24 @@ public class ParallelLeafReader extends LeafReader {
   }
 
   @Override
-  public void document(int docID, StoredFieldVisitor visitor) throws IOException {
-    ensureOpen();
-    for (final LeafReader reader : storedFieldsReaders) {
-      reader.document(docID, visitor);
-    }
+  public StoredFields storedFields() {
+    return new StoredFields() {
+      private final StoredFields[] storedFields = new StoredFields[storedFieldsReaders.length];
+
+      {
+        for (int i = 0; i < storedFieldsReaders.length; i++) {
+          storedFields[i] = storedFieldsReaders[i].storedFields();
+        }
+      }
+
+      @Override
+      public void document(int docID, StoredFieldVisitor visitor) throws IOException {
+        ensureOpen();
+        for (StoredFields s : storedFields) {
+          s.document(docID, visitor);
+        }
+      }
+    };
   }
 
   @Override

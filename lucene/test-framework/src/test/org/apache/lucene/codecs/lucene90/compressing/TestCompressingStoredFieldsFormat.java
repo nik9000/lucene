@@ -299,7 +299,7 @@ public class TestCompressingStoredFieldsFormat extends BaseStoredFieldsFormatTes
       for (LeafReaderContext leaf : ir2.leaves()) {
         CodecReader sr = (CodecReader) leaf.reader();
         Lucene90CompressingStoredFieldsReader reader =
-            (Lucene90CompressingStoredFieldsReader) sr.getFieldsReader();
+            (Lucene90CompressingStoredFieldsReader) sr.newFieldsReader();
         assertTrue(reader.getNumDirtyDocs() > 0);
         assertTrue(reader.getNumDirtyDocs() < 100); // can't be gte the number of docs per chunk
         assertEquals(1, reader.getNumDirtyChunks());
@@ -318,7 +318,7 @@ public class TestCompressingStoredFieldsFormat extends BaseStoredFieldsFormatTes
     ir = ir2;
     CodecReader sr = (CodecReader) getOnlyLeafReader(ir);
     Lucene90CompressingStoredFieldsReader reader =
-        (Lucene90CompressingStoredFieldsReader) sr.getFieldsReader();
+        (Lucene90CompressingStoredFieldsReader) sr.newFieldsReader();
     // at most 2: the 5 chunks from 5 doc segment will be collapsed into a single chunk
     assertTrue(reader.getNumDirtyChunks() <= 2);
     ir.close();

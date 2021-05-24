@@ -69,16 +69,8 @@ final class SegmentCoreReaders {
   final FieldInfos coreFieldInfos;
 
   // TODO: make a single thread local w/ a
-  // Thingy class holding fieldsReader, termVectorsReader,
+  // Thingy class holding termVectorsReader,
   // normsProducer
-
-  final CloseableThreadLocal<StoredFieldsReader> fieldsReaderLocal =
-      new CloseableThreadLocal<StoredFieldsReader>() {
-        @Override
-        protected StoredFieldsReader initialValue() {
-          return fieldsReaderOrig.clone();
-        }
-      };
 
   final CloseableThreadLocal<TermVectorsReader> termVectorsLocal =
       new CloseableThreadLocal<TermVectorsReader>() {
@@ -187,7 +179,6 @@ final class SegmentCoreReaders {
       try (Closeable finalizer = this::notifyCoreClosedListeners) {
         IOUtils.close(
             termVectorsLocal,
-            fieldsReaderLocal,
             fields,
             termVectorsReaderOrig,
             fieldsReaderOrig,

@@ -249,9 +249,9 @@ public final class SegmentReader extends CodecReader {
   }
 
   @Override
-  public StoredFieldsReader getFieldsReader() {
+  public StoredFieldsReader newFieldsReader() {
     ensureOpen();
-    return core.fieldsReaderLocal.get();
+    return core.fieldsReaderOrig.clone();
   }
 
   @Override

@@ -148,10 +148,20 @@ public abstract class BaseCompositeReader<R extends IndexReader> extends Composi
   }
 
   @Override
-  public final void document(int docID, StoredFieldVisitor visitor) throws IOException {
-    ensureOpen();
-    final int i = readerIndex(docID); // find subreader num
-    subReaders[i].document(docID - starts[i], visitor); // dispatch to subreader
+  public StoredFields storedFields() {
+    return new StoredFields() {
+      private final StoredFields[] subStored = new StoredFields[subReaders.length];
+
+      @Override
+      public void document(int docID, StoredFieldVisitor visitor) throws IOException {
+        ensureOpen();
+        final int i = readerIndex(docID); // find subreader num
+        if (subStored[i] == null) {
+          subStored[i] = subReaders[i].storedFields();
+        }
+        subStored[i].document(docID - starts[i], visitor); // dispatch to subreader
+      }
+    };
   }
 
   @Override
